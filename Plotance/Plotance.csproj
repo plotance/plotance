@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Plotance</PackageId>
+    <Title>Plotance</Title>
+    <Version>1.0.0</Version>
+    <Description>A cross-platform command-line tool converting Markdown + SQL into plain editable PowerPoint presentations with charts, powered by DuckDB.</Description>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;win-arm64;osx-arm64;linux-x64;linux-arm64</RuntimeIdentifiers>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>plotance</AssemblyName>
+    <!--
+        Workaround for https://github.com/dotnet/runtime/issues/113215 .
+        Remove this when fixed (maybe .NET 10?).
+    -->
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
+    <PackageReference Include="DuckDB.NET.Data.Full" Version="1.2.0" />
+    <PackageReference Include="Markdig" Version="0.40.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+</Project>

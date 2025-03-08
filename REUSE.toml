@@ -1,0 +1,15 @@
+version = 1
+# https://reuse.software/spec-3.2/
+
+[[annotations]]
+path = [
+  ".editorconfig",
+  ".gitattributes",
+  ".gitignore",
+  "REUSE.toml",
+  "README.md",
+  "Plotance.sln",
+  "**/*.csproj",
+]
+SPDX-FileCopyrightText = "2025 Plotance contributors <https://plotance.github.io/>"
+SPDX-License-Identifier = "MIT"

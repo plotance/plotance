@@ -1,0 +1,24 @@
+* text=auto
+
+*.sln text eol=crlf
+*.csproj text eol=crlf
+
+*.cs text diff=csharp
+*.csx text diff=csharp
+
+*.md text diff=markdown
+*.html text diff=html
+*.css text diff=css
+*.csv text
+*.json text
+*.yaml text
+*.txt text
+
+*.pptx binary
+*.xlsx binary
+*.docx binary
+
+*.svg text
+*.png binary
+*.jpg binary
+*.jpeg binary

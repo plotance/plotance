@@ -1,0 +1,41 @@
+## .NET Core
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+.vscode/
+*.dll
+*.exe
+*.pdb
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Rider
+.idea/
+*.sln.iml
+
+## Test Results
+TestResults/
+
+## Release archive directory
+/releases
