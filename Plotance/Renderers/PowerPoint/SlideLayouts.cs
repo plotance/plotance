@@ -16,7 +16,7 @@ public static class SlideLayouts
 {
     /// <summary>Unique identifier for slide number field.</summary>
     internal static string s_slideNumberFieldGuidString
-        = "{" + Guid.NewGuid().ToString().ToUpperInvariant() + "}";
+        = Guid.NewGuid().ToString("B").ToUpperInvariant();
 
     /// <summary>Names of slide layouts.</summary>
     private static IReadOnlyDictionary<SlideLayoutValues, string>
