@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using Markdig.Helpers;
@@ -521,5 +522,71 @@ public static class Paragraphs
         }
 
         return hyperlinkOnClick;
+    }
+
+    /// <summary>Converts a Markdown inline element to plain text.</summary>
+    /// <param name="variables">
+    /// Dictionary of variables to expand in text content.
+    /// </param>
+    /// <param name="inline">The Markdown inline element to convert.</param>
+    /// <returns>The plain text representation of the inline element.</returns>
+    public static string ToPlainText(
+        IReadOnlyDictionary<string, string> variables,
+        Inline inline
+    )
+    {
+        var builder = new StringBuilder();
+
+        void AppendText(string text)
+        {
+            builder.Append(
+                Variables.ExpandVariables(text, variables) ?? string.Empty
+            );
+        }
+
+        void AppendInline(Inline inline)
+        {
+            switch (inline)
+            {
+                case LiteralInline literal:
+                    AppendText(literal.Content.ToString());
+                    break;
+
+                case CodeInline code:
+                    AppendText(code.Content);
+                    break;
+
+                case LineBreakInline:
+                    AppendText(" ");
+                    break;
+
+                case AutolinkInline autolink:
+                    AppendText("<" + autolink.Url + ">");
+                    break;
+
+                case HtmlEntityInline entity:
+                    AppendText(entity.Transcoded.ToString());
+                    break;
+
+                case HtmlInline html:
+                    AppendText(html.Tag);
+                    break;
+
+                case ContainerInline container:
+                    foreach (var child in container)
+                    {
+                        AppendInline(child);
+                    }
+                    break;
+
+                default:
+                    AppendText(inline.ToString() ?? string.Empty);
+                    break;
+            }
+        }
+
+        AppendInline(inline);
+
+        return builder.ToString();
     }
 }

@@ -11,6 +11,7 @@ using Markdig.Syntax;
 using Plotance.Models;
 
 using D = DocumentFormat.OpenXml.Drawing;
+using P14 = DocumentFormat.OpenXml.Office2010.PowerPoint;
 
 namespace Plotance.Renderers.PowerPoint;
 
@@ -58,6 +59,13 @@ public static class PowerPointRenderer
         {
             RenderSection(document, section);
         }
+
+        AddSectionList(
+            Presentations.ExtractPresentation(
+                Presentations.ExtractPresentationPart(document)
+            ),
+            sections
+        );
 
         document.Save();
 
@@ -609,6 +617,111 @@ public static class PowerPointRenderer
         => block.GetData("path") as string ?? throw new ArgumentException(
             $"path is not set."
         );
+
+    /// <summary>
+    /// Adds section list to the presentation when there are two or more
+    /// presentation sections.
+    /// </summary>
+    /// <param name="presentation">The presentation.</param>
+    /// <param name="implicitSections">
+    /// Implicit sections in rendering order.
+    /// </param>
+    private static void AddSectionList(
+        Presentation presentation,
+        IReadOnlyList<ImplicitSection> implicitSections
+    )
+    {
+        var slideIds = presentation.SlideIdList?.Elements<SlideId>()?.ToList()
+            ?? [];
+
+        var presentationSections
+            = new List<(string Name, List<uint> SlideIds)>();
+
+        foreach (var (section, slideId) in implicitSections.Zip(slideIds))
+        {
+            var headingLevel = section.HeadingBlock?.Level ?? Int32.MaxValue;
+            var slideLevel = section.SlideLevel?.Value ?? 2;
+            var startsNew = headingLevel < slideLevel;
+
+            if (startsNew || presentationSections.Count == 0)
+            {
+                var defaultName = $"Section {presentationSections.Count + 1}";
+                var name = section.HeadingBlock == null
+                    ? defaultName
+                    : ExtractHeadingText(
+                        section.Variables,
+                        section.HeadingBlock
+                    );
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = defaultName;
+                }
+
+                presentationSections.Add((name, []));
+            }
+
+            presentationSections[^1].SlideIds.Add(slideId.Id ?? 0);
+        }
+
+        if (presentationSections.Count < 2)
+        {
+            return;
+        }
+
+        var extList = presentation.PresentationExtensionList
+            ??= new PresentationExtensionList();
+
+        const string SectionListUri = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}";
+
+        extList.AddChild(
+            new PresentationExtension(
+                new P14.SectionList(
+                    presentationSections.Select(
+                        section => new P14.Section(
+                            new P14.SectionSlideIdList(
+                                section.SlideIds.Select(
+                                    slideId => new P14.SectionSlideIdListEntry()
+                                    {
+                                        Id = slideId
+                                    }
+                                )
+                            )
+                        )
+                        {
+                            Name = section.Name,
+                            Id = Guid.NewGuid().ToString("B").ToUpperInvariant()
+                        }
+                    )
+                )
+            )
+            {
+                Uri = SectionListUri
+            }
+        );
+    }
+
+    /// <summary>
+    /// Extracts plain text from a heading block.
+    /// </summary>
+    /// <param name="variables">
+    /// Dictionary of variables to expand in text content.
+    /// </param>
+    /// <param name="heading">The heading block to extract text from.</param>
+    /// <returns>
+    /// The extracted text or null if the block has no inline content.
+    /// </returns>
+    private static string ExtractHeadingText(
+        IReadOnlyDictionary<string, string> variables,
+        HeadingBlock heading
+    )
+    {
+        var inline = heading.Inline;
+
+        return inline == null
+            ? string.Empty
+            : Paragraphs.ToPlainText(variables, inline);
+    }
 
     /// <summary>
     /// Validates the presentation document. Errors are written to
