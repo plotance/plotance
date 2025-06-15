@@ -103,12 +103,9 @@ public record ImplicitSection(
             }
         }
 
-        if (currentSection.Any())
-        {
-            AddSection();
-        }
+        AddSection();
 
-        if (sections.Any() && !sections[0].Rows.Any())
+        if (!sections[0].Rows.Any())
         {
             sections.RemoveAt(0);
         }
