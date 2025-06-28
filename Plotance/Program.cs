@@ -15,61 +15,64 @@ using Plotance.Renderers.Query;
 var rootCommand = new RootCommand(
     "Convert markdown to PowerPoint presentation"
 );
-var inputArgument = new Argument<FileInfo>(
-    name: "input",
-    description: "Input markdown file"
-);
-var templateOption = new Option<FileInfo?>(
-    name: "--template",
-    description: "Template PowerPoint file"
-);
-var argumentOption = new Option<string[]>(
-    aliases: ["--argument", "--arg"],
-    description: "Additional arguments in NAME=VALUE format."
-        + " Can be specified multiple times"
-);
 
-var outputOption = new Option<FileInfo?>(
-    aliases: ["--output", "-o"],
-    description: "Output PowerPoint file"
-);
+var inputArgument = new Argument<FileInfo>("input")
+{
+    Description = "Input markdown file"
+};
 
-var verbosityOption = new Option<string>(
-    aliases: ["--verbosity", "-v", "-verbose"],
-    description: "Set verbosity. Quiet or Diagnostic (default)"
-);
+var templateOption = new Option<FileInfo?>("--template")
+{
+    Description = "Template PowerPoint file"
+};
 
-verbosityOption.SetDefaultValue("Diagnostic");
+var argumentOption = new Option<string[]>("--argument", "--arg")
+{
+    Description = "Additional arguments in NAME=VALUE format."
+    + " Can be specified multiple times"
+};
+
+var outputOption = new Option<FileInfo?>("--output", "-o")
+{
+    Description = "Output PowerPoint file"
+};
+
+var verbosityOption = new Option<string>("--verbosity", "-v", "-verbose")
+{
+    Description = "Set verbosity. Quiet or Diagnostic (default)",
+    DefaultValueFactory = _ => "Diagnostic"
+};
+
 verbosityOption.Arity = ArgumentArity.ZeroOrOne;
 
-var quietOption = new Option<bool>(
-    aliases: ["-q"],
-    description: "Alias for --verbosity Quiet."
-);
+var quietOption = new Option<bool>("-q")
+{
+    Description = "Alias for --verbosity Quiet."
+};
 
-rootCommand.AddArgument(inputArgument);
-rootCommand.AddOption(templateOption);
-rootCommand.AddOption(outputOption);
-rootCommand.AddOption(argumentOption);
-rootCommand.AddOption(verbosityOption);
-rootCommand.AddOption(quietOption);
+rootCommand.Arguments.Add(inputArgument);
+rootCommand.Options.Add(templateOption);
+rootCommand.Options.Add(outputOption);
+rootCommand.Options.Add(argumentOption);
+rootCommand.Options.Add(verbosityOption);
+rootCommand.Options.Add(quietOption);
 
-void Main(InvocationContext context)
+int Main(ParseResult parseResult)
 {
     try
     {
-        var input = context.ParseResult.GetValueForArgument(inputArgument);
-        var template = context.ParseResult.GetValueForOption(templateOption);
-        var output = context.ParseResult.GetValueForOption(outputOption);
-        var verbosity = context.ParseResult.GetValueForOption(verbosityOption);
-        var quiet = context.ParseResult.GetValueForOption(quietOption);
+        var input = parseResult.GetRequiredValue(inputArgument);
+        var template = parseResult.GetValue(templateOption);
+        var output = parseResult.GetValue(outputOption);
+        var verbosity = parseResult.GetRequiredValue(verbosityOption);
+        var quiet = parseResult.GetValue(quietOption);
 
         if (quiet)
         {
             verbosity = "Quiet";
         }
 
-        quiet = (verbosity ?? "Diagnostic").ToLowerInvariant() switch
+        quiet = verbosity.ToLowerInvariant() switch
         {
             "" or "diagnostic" or "diag" => false,
 
@@ -95,10 +98,7 @@ void Main(InvocationContext context)
         PowerPointRenderer.Quiet = quiet;
         Spreadsheets.Quiet = quiet;
 
-        var argumentsRaw = context
-            .ParseResult
-            .GetValueForOption(argumentOption)
-            ?? [];
+        var argumentsRaw = parseResult.GetValue(argumentOption) ?? [];
         var arguments = new Dictionary<string, string>();
 
         foreach (var pair in argumentsRaw)
@@ -168,13 +168,13 @@ void Main(InvocationContext context)
             );
         }
 
-        context.ExitCode = 0;
+        return 0;
     }
     catch (PlotanceException e)
     {
         Console.Error.WriteLine(e.MessageWithLocation);
         // TODO show inner errors if debug level is high.
-        context.ExitCode = 1;
+        return 1;
     }
     catch (Exception e)
     {
@@ -186,10 +186,10 @@ void Main(InvocationContext context)
             ex = ex.InnerException;
         }
 
-        context.ExitCode = 1;
+        return 1;
     }
 }
 
-rootCommand.SetHandler(Main);
+rootCommand.SetAction(Main);
 
-return rootCommand.Invoke(args);
+return rootCommand.Parse(args).Invoke();
