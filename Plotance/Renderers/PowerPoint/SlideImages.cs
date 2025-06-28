@@ -31,11 +31,17 @@ public static class SlideImages
     ///   </item>
     /// </list>
     /// </remarks>
+    /// <param name="variables">
+    /// The variables to use for variable expansion.
+    /// </param>
     /// <param name="block">The block to extract the image link from.</param>
     /// <returns>
     /// The extracted image link, or null if no image link is found.
     /// </returns>
-    public static ImageLink? ExtractImageLink(Block block)
+    public static ImageLink? ExtractImageLink(
+        IReadOnlyDictionary<string, string> variables,
+        Block block
+    )
     {
         if (block is ParagraphBlock paragraphBlock)
         {
@@ -51,7 +57,8 @@ public static class SlideImages
                     PowerPointRenderer.ExtractPath(block),
                     link.Line,
                     link.Url,
-                    link.Title,
+                    Variables.ExpandVariables(link.Title, variables)
+                        ?? Paragraphs.ToPlainText(variables, link),
                     null
                 );
             }
@@ -68,7 +75,8 @@ public static class SlideImages
                     PowerPointRenderer.ExtractPath(block),
                     childLink.Line,
                     childLink.Url,
-                    childLink.Title,
+                    Variables.ExpandVariables(childLink.Title, variables)
+                        ?? Paragraphs.ToPlainText(variables, childLink),
                     parentLink.Url
                 );
             }
@@ -89,9 +97,6 @@ public static class SlideImages
     /// supported. Shape size is adjusted to preserve aspect ratio of the image.
     /// </summary>
     /// <param name="slidePart">The slide part to embed the image into.</param>
-    /// <param name="variables">
-    /// The variables to use for variable expansion.
-    /// </param>
     /// <param name="imageLink">The image link to embed.</param>
     /// <param name="x">The X coordinate of the image.</param>
     /// <param name="y">The Y coordinate of the image.</param>
@@ -106,7 +111,6 @@ public static class SlideImages
     /// </exception>
     public static void EmbedImage(
         SlidePart slidePart,
-        IReadOnlyDictionary<string, string> variables,
         ImageLink imageLink,
         long x,
         long y,
@@ -151,7 +155,7 @@ public static class SlideImages
         var picture = CreatePictureElement(
             slidePart,
             slidePart.GetIdOfPart(imagePart),
-            Variables.ExpandVariables(imageLink.AlternativeText, variables),
+            imageLink.AlternativeText,
             imageLink.LinkUrl,
             x,
             y,

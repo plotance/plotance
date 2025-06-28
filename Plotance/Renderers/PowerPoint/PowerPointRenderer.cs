@@ -471,11 +471,13 @@ public static class PowerPointRenderer
                 );
             }
         }
-        else if (SlideImages.ExtractImageLink(block) is ImageLink imageLink)
+        else if (
+            SlideImages.ExtractImageLink(column.Variables, block)
+                is ImageLink imageLink
+        )
         {
             SlideImages.EmbedImage(
                 slidePart,
-                column.Variables,
                 imageLink,
                 x,
                 y,
