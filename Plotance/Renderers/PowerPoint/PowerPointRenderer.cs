@@ -483,7 +483,11 @@ public static class PowerPointRenderer
                 y,
                 width,
                 height,
-                isFirst
+                isFirst,
+                Geometries.ParseHorizontalAlign(column.BodyHorizontalAlign)
+                    ?? D.TextAlignmentTypeValues.Left,
+                Geometries.ParseVerticalAlign(column.BodyVerticalAlign)
+                    ?? D.TextAnchoringTypeValues.Top
             );
         }
         else

@@ -105,6 +105,12 @@ public static class SlideImages
     /// <param name="isFirst">
     /// Whether the image is the first image in the slide.
     /// </param>
+    /// <param name="horizontalAlignment">
+    /// The horizontal alignment of the image.
+    /// </param>
+    /// <param name="verticalAlignment">
+    /// The vertical alignment of the image.
+    /// </param>
     /// <exception cref="PlotanceException">
     /// Thrown if the URL is invalid, the image format is not supported, or the
     /// image data is invalid.
@@ -116,7 +122,9 @@ public static class SlideImages
         long y,
         long width,
         long height,
-        bool isFirst
+        bool isFirst,
+        D.TextAlignmentTypeValues horizontalAlignment,
+        D.TextAnchoringTypeValues verticalAlignment
     )
     {
         if (imageLink.ImageUrl == null)
@@ -125,6 +133,8 @@ public static class SlideImages
         }
 
         var imagePart = CreateImagePart(slidePart, imageLink);
+        long adjustedWidth;
+        long adjustedHeight;
 
         // Adjust shape size to preserve aspect ratio of the image.
         try
@@ -135,11 +145,13 @@ public static class SlideImages
 
             if (imageWidth * height < width * imageHeight)
             {
-                width = height * imageWidth / imageHeight;
+                adjustedWidth = height * imageWidth / imageHeight;
+                adjustedHeight = height;
             }
             else
             {
-                height = width * imageHeight / imageWidth;
+                adjustedWidth = width;
+                adjustedHeight = width * imageHeight / imageWidth;
             }
         }
         catch (ArgumentException e)
@@ -152,6 +164,24 @@ public static class SlideImages
             );
         }
 
+        if (horizontalAlignment == D.TextAlignmentTypeValues.Center)
+        {
+            x = x + (width - adjustedWidth) / 2;
+        }
+        else if (horizontalAlignment == D.TextAlignmentTypeValues.Right)
+        {
+            x = x + width - adjustedWidth;
+        }
+
+        if (verticalAlignment == D.TextAnchoringTypeValues.Center)
+        {
+            y = y + (height - adjustedHeight) / 2;
+        }
+        else if (verticalAlignment == D.TextAnchoringTypeValues.Bottom)
+        {
+            y = y + height - adjustedHeight;
+        }
+
         var picture = CreatePictureElement(
             slidePart,
             slidePart.GetIdOfPart(imagePart),
@@ -159,8 +189,8 @@ public static class SlideImages
             imageLink.LinkUrl,
             x,
             y,
-            width,
-            height,
+            adjustedWidth,
+            adjustedHeight,
             isFirst
         );
 
