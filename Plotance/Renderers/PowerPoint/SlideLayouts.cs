@@ -348,7 +348,11 @@ public static class SlideLayouts
                             Cx = (Int64Value)(9144000L - 16L * 36000L),
                             Cy = (Int64Value)(6858000L - 49L * 36000L)
                         }
-                    )
+                    ),
+                    new D.PresetGeometry(new D.AdjustValueList())
+                    {
+                        Preset = D.ShapeTypeValues.Rectangle
+                    }
                 ),
                 new TextBody(
                     new D.BodyProperties(
@@ -391,7 +395,11 @@ public static class SlideLayouts
                             Cx = (Int64Value)(8L * 36000L),
                             Cy = (Int64Value)(8L * 36000L)
                         }
-                    )
+                    ),
+                    new D.PresetGeometry(new D.AdjustValueList())
+                    {
+                        Preset = D.ShapeTypeValues.Rectangle
+                    }
                 ),
                 new TextBody(
                     new D.BodyProperties()
@@ -474,7 +482,11 @@ public static class SlideLayouts
                                 Cx = (Int64Value)(9144000L - 16L * 36000L),
                                 Cy = (Int64Value)(23L * 36000L)
                             }
-                        )
+                        ),
+                        new D.PresetGeometry(new D.AdjustValueList())
+                        {
+                            Preset = D.ShapeTypeValues.Rectangle
+                        }
                     ),
                     new TextBody(
                         new D.BodyProperties(
@@ -519,7 +531,11 @@ public static class SlideLayouts
                                 Cx = (Int64Value)(9144000L - 16L * 36000L),
                                 Cy = (Int64Value)(23L * 36000L)
                             }
-                        )
+                        ),
+                        new D.PresetGeometry(new D.AdjustValueList())
+                        {
+                            Preset = D.ShapeTypeValues.Rectangle
+                        }
                     ),
                     new TextBody(
                         new D.BodyProperties(

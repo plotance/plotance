@@ -45,7 +45,11 @@ public static class Shapes
                         Cx = (Int64Value)(9144000L - 16L * 36000L),
                         Cy = (Int64Value)(23L * 36000L)
                     }
-                )
+                ),
+                new D.PresetGeometry(new D.AdjustValueList())
+                {
+                    Preset = D.ShapeTypeValues.Rectangle
+                }
             ),
             new TextBody(
                 new D.BodyProperties(
@@ -107,7 +111,12 @@ public static class Shapes
     {
         var shapeProperties = shape
             .ShapeProperties
-            ??= new ShapeProperties();
+            ??= new ShapeProperties(
+                new D.PresetGeometry(new D.AdjustValueList())
+                {
+                    Preset = D.ShapeTypeValues.Rectangle
+                }
+            );
 
         shapeProperties.RemoveAllChildren<D.Transform2D>();
 

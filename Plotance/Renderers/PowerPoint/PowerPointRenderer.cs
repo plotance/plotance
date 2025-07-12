@@ -244,7 +244,12 @@ public static class PowerPointRenderer
                     }
                 )
             ),
-            new ShapeProperties(),
+            new ShapeProperties(
+                new D.PresetGeometry(new D.AdjustValueList())
+                {
+                    Preset = D.ShapeTypeValues.Rectangle
+                }
+            ),
             new TextBody(
                 new D.BodyProperties(
                     new D.NoAutoFit()
@@ -595,15 +600,18 @@ public static class PowerPointRenderer
 
         if (!isFirst)
         {
-            var placeholderShape = shape
-                .NonVisualShapeProperties
-                ?.ApplicationNonVisualDrawingProperties
-                ?.PlaceholderShape;
+            SlideLayouts.ExtractPlaceholderShape(shape)?.Remove();
 
-            if (placeholderShape != null)
-            {
-                placeholderShape.Index = null;
-            }
+            var shapeProperties = (
+                shape.ShapeProperties ??= new ShapeProperties()
+            );
+
+            shapeProperties.AddChild(
+                new D.PresetGeometry()
+                {
+                    Preset = D.ShapeTypeValues.Rectangle
+                }
+            );
         }
 
         slidePart
