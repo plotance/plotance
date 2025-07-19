@@ -38,7 +38,7 @@ public static class PowerPointRenderer
     /// <exception cref="ArgumentException">
     /// Thrown when the block has an invalid structure, the configuration is
     /// invalid, image URL is invalid, image format is not supported, or the
-    /// image data is invalid..
+    /// image data is invalid.
     /// </exception>
     public static PresentationDocument Render(
         PresentationDocument template,
@@ -121,22 +121,35 @@ public static class PowerPointRenderer
 
         RenderHeading(slidePart, slideParagraphStyles, section);
 
+        var layoutDirection = section.LayoutDirection?.Value
+            ?? LayoutDirection.Row;
         var isFirst = true;
         var bodyRegion = SlideLayouts.ExtractBodyRegion(slidePart, bodyShape);
-        var y = bodyRegion.Y;
-        var yPositions = ComputeYPositions(bodyRegion.Height, section);
+        var origin = layoutDirection.Choose(
+            row: bodyRegion.Y,
+            column: bodyRegion.X
+        );
+        var totalLength = layoutDirection.Choose(
+            row: bodyRegion.Height,
+            column: bodyRegion.Width
+        );
+        var offsets = ComputeBlockGroupOffsets(totalLength, section);
 
-        foreach (var (row, (yOffset, height)) in section.Rows.Zip(yPositions))
+        foreach (
+            var (blockGroup, (offset, length))
+                in section.BlockGroups.Zip(offsets)
+        )
         {
-            RenderRow(
+            RenderBlockGroup(
                 slidePart,
                 bodyRegion,
                 slideParagraphStyles,
                 templateShape,
+                layoutDirection,
                 isFirst,
-                y + yOffset,
-                height,
-                row
+                origin + offset,
+                length,
+                blockGroup
             );
 
             isFirst = false;
@@ -148,31 +161,38 @@ public static class PowerPointRenderer
         }
     }
 
-    /// <summary>Computes the Y position and height of the rows.</summary>
-    /// <param name="totalHeight">The total height of the section.</param>
+    /// <summary>
+    /// Computes the offsets and lengths of the block groups.
+    ///
+    /// If LayoutDirection is "row", computes the Y positions and heights of
+    /// the rows. If LayoutDirection is "column", computes the X positions and
+    /// widths of the columns.
+    /// </summary>
+    /// <param name="totalLength">The total length of the section.</param>
     /// <param name="section">
-    /// The section to compute the Y positions for.
+    /// The section to compute the offsets and lengths.
     /// </param>
-    /// <returns>The Y position and height of the rows.</returns>
+    /// <returns>The offsets and lengths of the block groups.</returns>
     /// <exception cref="PlotanceException">
-    /// Thrown when the rows do not fit into the space.
+    /// Thrown when the block group do not fit into the space.
     /// </exception>
-    private static IReadOnlyList<(long Start, long Length)> ComputeYPositions(
-        long totalHeight,
-        ImplicitSection section
-    )
+    private static IReadOnlyList<(long Start, long Length)>
+        ComputeBlockGroupOffsets(
+            long totalLength,
+            ImplicitSection section
+        )
     {
         try
         {
             return ILengthWeight
                 .Divide(
-                    totalHeight,
+                    totalLength,
                     section
-                        .Rows
+                        .BlockGroups
                         .Select(
-                            row => (
-                                Weight: row.Weight,
-                                Gap: row.GapBefore?.ToEmu() ?? 0
+                            blockGroup => (
+                                Weight: blockGroup.Weight,
+                                Gap: blockGroup.GapBefore?.ToEmu() ?? 0
                             )
                         )
                         .ToList()
@@ -180,10 +200,16 @@ public static class PowerPointRenderer
         }
         catch (ArgumentException e)
         {
+            var layoutDirection = section.LayoutDirection?.Value
+                ?? LayoutDirection.Row;
+
             throw new PlotanceException(
                 section.Path,
                 section.Line,
-                "Rows does not fit into the space.",
+                layoutDirection.Choose(
+                    row: "Rows does not fit into the space.",
+                    column: "Columns does not fit into the space."
+                ),
                 e
             );
         }
@@ -322,78 +348,128 @@ public static class PowerPointRenderer
         }
     }
 
-    /// <summary>Renders a row to a slide.</summary>
+    /// <summary>
+    /// Renders a block group (row if layout direction is "row" or column if
+    /// layout direction is "column") to a slide.
+    /// </summary>
     /// <param name="slidePart">The slide part to render to.</param>
     /// <param name="bodyRegion">The body region to render to.</param>
     /// <param name="slideParagraphStyles">The slide paragraph styles.</param>
     /// <param name="templateShape">The template shape.</param>
-    /// <param name="isFirstRow">Whether this is the first row.</param>
-    /// <param name="y">The Y coordinate of the row.</param>
-    /// <param name="height">The height of the row.</param>
-    /// <param name="row">The row to render.</param>
+    /// <param name="layoutDirection">
+    /// The layout direction of the block group.
+    /// </param>
+    /// <param name="isFirstGroup">
+    /// Whether this is the first block group.
+    /// </param>
+    /// <param name="groupOffset">
+    /// The offset (Y or X positions) of the block group.
+    /// </param>
+    /// <param name="groupLength">
+    /// The length (height or width) of the block group.
+    /// </param>
+    /// <param name="blockGroup">The block group to render.</param>
     /// <exception cref="PlotanceException">
     /// Thrown when the block has an invalid structure, the configuration is
     /// invalid, image URL is invalid, image format is not supported, or the
     /// image data is invalid.
     /// </exception>
-    private static void RenderRow(
+    private static void RenderBlockGroup(
         SlidePart slidePart,
         Rectangle bodyRegion,
         SlideParagraphStyles slideParagraphStyles,
         Shape templateShape,
-        bool isFirstRow,
-        long y,
-        long height,
-        ImplicitSectionRow row
+        LayoutDirection layoutDirection,
+        bool isFirstGroup,
+        long groupOffset,
+        long groupLength,
+        BlockGroup blockGroup
     )
     {
-        var isFirstColumn = true;
-        var x = bodyRegion.X;
-        var xPositions = ComputeXPositions(bodyRegion.Width, row);
+        var isFirstBlock = true;
+        var origin = layoutDirection.Choose(
+            row: bodyRegion.X,
+            column: bodyRegion.Y
+        );
+        var totalLength = layoutDirection.Choose(
+            row: bodyRegion.Width,
+            column: bodyRegion.Height
+        );
+        var offsets = ComputeBlockOffsets(
+            layoutDirection,
+            totalLength,
+            blockGroup
+        );
 
         foreach (
-            var (column, (xOffset, width)) in row.Columns.Zip(xPositions)
+            var (block, (offset, length)) in blockGroup.Blocks.Zip(offsets)
         )
         {
-            RenderColumn(
+            var x = layoutDirection.Choose(
+                row: origin + offset,
+                column: groupOffset
+            );
+            var y = layoutDirection.Choose(
+                row: groupOffset,
+                column: origin + offset
+            );
+            var width = layoutDirection.Choose(
+                row: length,
+                column: groupLength
+            );
+            var height = layoutDirection.Choose(
+                row: groupLength,
+                column: length
+            );
+
+            RenderBlock(
                 slidePart,
                 slideParagraphStyles,
                 templateShape,
-                isFirstRow && isFirstColumn,
-                x + xOffset,
+                isFirstGroup && isFirstBlock,
+                x,
                 y,
                 width,
                 height,
-                column
+                block
             );
 
-            isFirstColumn = false;
+            isFirstBlock = false;
         }
     }
 
-    /// <summary>Computes the X position and width of the columns.</summary>
-    /// <param name="totalWidth">The total width of the row.</param>
-    /// <param name="row">The row to compute the X positions for.</param>
-    /// <returns>The X position and width of the columns.</returns>
+    /// <summary>
+    /// Computes the offsets and lengths of the blocks.
+    ///
+    /// If LayoutDirection is "row", computes the X positions and widths of
+    /// the rows. If LayoutDirection is "column", computes the Y positions and
+    /// heights of the columns.
+    /// </summary>
+    /// <param name="totalLength">The total length of the block group.</param>
+    /// <param name="blockGroup">
+    /// The block group to compute the offsets and lengths.
+    /// </param>
+    /// <returns>The offsets and length of the blocks.</returns>
     /// <exception cref="PlotanceException">
-    /// Thrown when the columns do not fit into the space.
+    /// Thrown when the blocks do not fit into the space.
     /// </exception>
-    private static IReadOnlyList<(long Start, long Length)> ComputeXPositions(
-        long totalWidth,
-        ImplicitSectionRow row
+    private static IReadOnlyList<(long Start, long Length)> ComputeBlockOffsets(
+        LayoutDirection layoutDirection,
+        long totalLength,
+        BlockGroup blockGroup
     )
     {
         try
         {
             return ILengthWeight
                 .Divide(
-                    totalWidth,
-                    row
-                        .Columns
+                    totalLength,
+                    blockGroup
+                        .Blocks
                         .Select(
-                            column => (
-                                Weight: column.Weight,
-                                Gap: column.GapBefore?.ToEmu() ?? 0
+                            block => (
+                                Weight: block.Weight,
+                                Gap: block.GapBefore?.ToEmu() ?? 0
                             )
                         )
                         .ToList()
@@ -402,15 +478,18 @@ public static class PowerPointRenderer
         catch (ArgumentException e)
         {
             throw new PlotanceException(
-                row.Path,
-                row.Line,
-                "Columns does not fit into the space.",
+                blockGroup.Path,
+                blockGroup.Line,
+                layoutDirection.Choose(
+                    row: "Columns does not fit into the space.",
+                    column: "Rows does not fit into the space."
+                ),
                 e
             );
         }
     }
 
-    /// <summary>Renders a column to a slide.</summary>
+    /// <summary>Renders a block to a slide.</summary>
     /// <param name="slidePart">The slide part to render to.</param>
     /// <param name="slideParagraphStyles">The slide paragraph styles.</param>
     /// <param name="templateShape">The template shape.</param>
@@ -421,13 +500,13 @@ public static class PowerPointRenderer
     /// <param name="y">The Y coordinate of the block.</param>
     /// <param name="width">The width of the block.</param>
     /// <param name="height">The height of the block.</param>
-    /// <param name="column">The column to render.</param>
+    /// <param name="blockContainer">The block container to render.</param>
     /// <exception cref="PlotanceException">
     /// Thrown when the block has an invalid structure, the configuration is
     /// invalid, image URL is invalid, image format is not supported, or the
     /// image data is invalid.
     /// </exception>
-    private static void RenderColumn(
+    private static void RenderBlock(
         SlidePart slidePart,
         SlideParagraphStyles slideParagraphStyles,
         Shape templateShape,
@@ -436,19 +515,19 @@ public static class PowerPointRenderer
         long y,
         long width,
         long height,
-        ImplicitSectionColumn column
+        BlockContainer blockContainer
     )
     {
-        var block = column.Block;
+        var block = blockContainer.Block;
 
         if (
             block.GetData("query_results")
                 is IReadOnlyList<QueryResultSet> queryResults
         )
         {
-            if (column.ChartOptions?.Format?.Value == "table")
+            if (blockContainer.ChartOptions?.Format?.Value == "table")
             {
-                var bodyFontScale = column.BodyFontScale?.Value ?? 1m;
+                var bodyFontScale = blockContainer.BodyFontScale?.Value ?? 1m;
 
                 TableRenderer.Render(
                     slidePart,
@@ -458,7 +537,7 @@ public static class PowerPointRenderer
                     y,
                     width,
                     height,
-                    column,
+                    blockContainer,
                     queryResults
                 );
             }
@@ -471,13 +550,13 @@ public static class PowerPointRenderer
                     y,
                     width,
                     height,
-                    column,
+                    blockContainer,
                     queryResults
                 );
             }
         }
         else if (
-            SlideImages.ExtractImageLink(column.Variables, block)
+            SlideImages.ExtractImageLink(blockContainer.Variables, block)
                 is ImageLink imageLink
         )
         {
@@ -489,9 +568,11 @@ public static class PowerPointRenderer
                 width,
                 height,
                 isFirst,
-                Geometries.ParseHorizontalAlign(column.BodyHorizontalAlign)
+                Geometries
+                    .ParseHorizontalAlign(blockContainer.BodyHorizontalAlign)
                     ?? D.TextAlignmentTypeValues.Left,
-                Geometries.ParseVerticalAlign(column.BodyVerticalAlign)
+                Geometries
+                    .ParseVerticalAlign(blockContainer.BodyVerticalAlign)
                     ?? D.TextAnchoringTypeValues.Top
             );
         }
@@ -506,7 +587,7 @@ public static class PowerPointRenderer
                 y,
                 width,
                 height,
-                column
+                blockContainer
             );
         }
     }
@@ -522,7 +603,7 @@ public static class PowerPointRenderer
     /// <param name="y">The Y coordinate of the block.</param>
     /// <param name="width">The new width of the shape.</param>
     /// <param name="height">The new height of the shape.</param>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <exception cref="PlotanceException">
     /// Thrown when the block has an invalid structure or the configuration is
     /// invalid.
@@ -536,16 +617,16 @@ public static class PowerPointRenderer
         long y,
         long width,
         long height,
-        ImplicitSectionColumn column
+        BlockContainer blockContainer
     )
     {
-        var bodyFontScale = column.BodyFontScale?.Value ?? 1m;
+        var bodyFontScale = blockContainer.BodyFontScale?.Value ?? 1m;
         var shape = Shapes.CreateShapeFromTemplate(templateShape);
 
         if (
             bodyFontScale != 1m
-                || column.Language != null
-                || column.BodyHorizontalAlign != null
+                || blockContainer.Language != null
+                || blockContainer.BodyHorizontalAlign != null
                 || !isFirst
         )
         {
@@ -559,10 +640,10 @@ public static class PowerPointRenderer
             var listStyle = slideParagraphStyles
                 .Body
                 .Scaled(bodyFontScale)
-                .WithLanguage(column.Language);
+                .WithLanguage(blockContainer.Language);
 
             if (
-                Geometries.ParseHorizontalAlign(column.BodyHorizontalAlign)
+                Geometries.ParseHorizontalAlign(blockContainer.BodyHorizontalAlign)
                     is D.TextAlignmentTypeValues horizontalAlign
             )
             {
@@ -577,14 +658,14 @@ public static class PowerPointRenderer
             shape,
             Paragraphs.CreateParagraphs(
                 slidePart,
-                column.Variables,
-                ExtractPath(column.Block),
-                column.Block
+                blockContainer.Variables,
+                ExtractPath(blockContainer.Block),
+                blockContainer.Block
             )
         );
 
         if (
-            Geometries.ParseVerticalAlign(column.BodyVerticalAlign)
+            Geometries.ParseVerticalAlign(blockContainer.BodyVerticalAlign)
                 is D.TextAnchoringTypeValues verticalAlign
         )
         {

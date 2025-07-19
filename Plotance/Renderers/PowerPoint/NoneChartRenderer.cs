@@ -13,7 +13,7 @@ public class NoneChartRenderer : ChartRenderer
     /// <inheritdoc/>
     protected override void RenderChart(
         ChartPart chartPart,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         string relationShipId
     )

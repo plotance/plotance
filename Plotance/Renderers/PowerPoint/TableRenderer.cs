@@ -28,7 +28,7 @@ public static class TableRenderer
     /// <param name="y">The Y coordinate of the table.</param>
     /// <param name="width">The width of the table.</param>
     /// <param name="height">The height of the table.</param>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResults">The query results.</param>
     /// <exception cref="PlotanceException">
     /// Thrown when the table configuration is invalid.
@@ -41,7 +41,7 @@ public static class TableRenderer
         long y,
         long width,
         long height,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         IReadOnlyList<QueryResultSet> queryResults
     )
     {
@@ -101,9 +101,9 @@ public static class TableRenderer
                     new D.Graphic(
                         new D.GraphicData(
                             CreateTable(
-                                column.Path,
-                                column.Line,
-                                column.ChartOptions,
+                                block.Path,
+                                block.Line,
+                                block.ChartOptions,
                                 paragraphStyles,
                                 width,
                                 height,

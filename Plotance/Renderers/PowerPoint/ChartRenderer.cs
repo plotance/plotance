@@ -57,7 +57,7 @@ public abstract class ChartRenderer
     /// <param name="y">The Y coordinate of the chart.</param>
     /// <param name="width">The width of the chart.</param>
     /// <param name="height">The height of the chart.</param>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResults">The query results.</param>
     /// <exception cref="PlotanceException">
     /// Thrown if the chart format is not supported.
@@ -69,7 +69,7 @@ public abstract class ChartRenderer
         long y,
         long width,
         long height,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         IReadOnlyList<QueryResultSet> queryResults
     )
     {
@@ -96,7 +96,7 @@ public abstract class ChartRenderer
 
         var relationShipId = chartPart.GetIdOfPart(embeddedSpreadsheetPart);
 
-        var chartFormat = column.ChartOptions?.Format;
+        var chartFormat = block.ChartOptions?.Format;
         ChartRenderer renderer = chartFormat?.Value switch
         {
             "none" => new NoneChartRenderer(),
@@ -113,7 +113,7 @@ public abstract class ChartRenderer
             )
         };
 
-        renderer.RenderChart(chartPart, column, queryResult, relationShipId);
+        renderer.RenderChart(chartPart, block, queryResult, relationShipId);
 
         var placeholderShape = new PlaceholderShape()
         {
@@ -171,7 +171,7 @@ public abstract class ChartRenderer
 
     /// <summary>Render a chart.</summary>
     /// <param name="chartPart">The chart part to render to.</param>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResult">The query result.</param>
     /// <param name="relationShipId">
     /// The relationship ID of the chart part.
@@ -181,7 +181,7 @@ public abstract class ChartRenderer
     /// </exception>
     protected abstract void RenderChart(
         ChartPart chartPart,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         string relationShipId
     );
@@ -333,7 +333,7 @@ public abstract class ChartRenderer
     }
 
     /// <summary>Creates an axis of the chart.</summary>
-    /// <param name="column">The column.</param>
+    /// <param name="block">The block.</param>
     /// <param name="valueType">The type of the column values.</param>
     /// <param name="id">The ID of the axis.</param>
     /// <param name="minValue">The minimum value.</param>
@@ -346,7 +346,7 @@ public abstract class ChartRenderer
     /// </param>
     /// <returns>The axis element.</returns>
     protected OpenXmlCompositeElement CreateAxis(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         Type valueType,
         uint id,
         IAxisRangeValue? minValue,
@@ -360,26 +360,26 @@ public abstract class ChartRenderer
         var isXAxis = position == C.AxisPositionValues.Top
             || position == C.AxisPositionValues.Bottom;
         var axisOptions = isXAxis
-            ? column.ChartOptions?.XAxisOptions
-            : column.ChartOptions?.YAxisOptions;
+            ? block.ChartOptions?.XAxisOptions
+            : block.ChartOptions?.YAxisOptions;
         var title = axisOptions?.Title;
-        var titleFontSize = column
+        var titleFontSize = block
             .ChartOptions
             ?.AxisTitleFontSize
             ?? ILength.FromPoint(14);
         var titleColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.AxisTitleColor);
+            .ParseColor(block.ChartOptions?.AxisTitleColor);
         var labelFormat = axisOptions?.LabelFormat?.Value ?? "auto";
         var labelRotate = axisOptions?.LabelRotate?.Value ?? 0;
-        var labelFontSize = column
+        var labelFontSize = block
             .ChartOptions
             ?.AxisLabelFontSize
             ?? ILength.FromPoint(14);
         var labelColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.AxisLabelColor);
+            .ParseColor(block.ChartOptions?.AxisLabelColor);
         var lineWidth = axisOptions?.LineWidth ?? ILength.FromPoint(1);
         var lineColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.AxisLineColor)
+            .ParseColor(block.ChartOptions?.AxisLineColor)
             ?? dark1.CloneNode(true);
         var majorUnit = axisOptions?.MajorUnit;
         var minorUnit = axisOptions?.MinorUnit;
@@ -388,10 +388,10 @@ public abstract class ChartRenderer
         var gridMajorWidth = axisOptions?.GridMajorWidth ?? ILength.Zero;
         var gridMinorWidth = axisOptions?.GridMinorWidth ?? ILength.Zero;
         var gridMajorColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.GridMajorColor)
+            .ParseColor(block.ChartOptions?.GridMajorColor)
             ?? dark1.CloneNode(true);
         var gridMinorColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.GridMinorColor)
+            .ParseColor(block.ChartOptions?.GridMinorColor)
             ?? dark1.CloneNode(true);
 
         minValue = axisOptions?.Minimum ?? minValue;
@@ -586,32 +586,32 @@ public abstract class ChartRenderer
     }
 
     /// <summary>Creates the legend of the chart if any.</summary>
-    /// <param name="column">The column.</param>
+    /// <param name="block">The block.</param>
     /// <returns>
     /// The legend element or null if the legend is not enabled.
     /// </returns>
     /// <exception cref="PlotanceException">
     /// Thrown if the legend position is invalid.
     /// </exception>
-    protected C.Legend? CreateLegend(ImplicitSectionColumn column)
+    protected C.Legend? CreateLegend(BlockContainer block)
     {
-        var position = column.ChartOptions?.LegendPosition?.Value ?? "right";
+        var position = block.ChartOptions?.LegendPosition?.Value ?? "right";
 
         if (position == "none")
         {
             return null;
         }
 
-        var lineWidth = column.ChartOptions?.LegendLineWidth ?? ILength.Zero;
+        var lineWidth = block.ChartOptions?.LegendLineWidth ?? ILength.Zero;
         var lineColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.LegendLineColor)
+            .ParseColor(block.ChartOptions?.LegendLineColor)
             ?? new D.SchemeColor() { Val = D.SchemeColorValues.Dark1 };
-        var fontSize = column
+        var fontSize = block
             .ChartOptions
             ?.LegendFontSize
             ?? ILength.FromPoint(14);
         var color = ColorRenderer
-            .ParseColor(column.ChartOptions?.LegendColor);
+            .ParseColor(block.ChartOptions?.LegendColor);
         var legendPosition = position switch
         {
             "bottom" => C.LegendPositionValues.Bottom,
@@ -620,8 +620,8 @@ public abstract class ChartRenderer
             "right" => C.LegendPositionValues.Right,
             "top" => C.LegendPositionValues.Top,
             _ => throw new PlotanceException(
-                column.ChartOptions?.LegendPosition?.Path,
-                column.ChartOptions?.LegendPosition?.Line,
+                block.ChartOptions?.LegendPosition?.Path,
+                block.ChartOptions?.LegendPosition?.Line,
                 $"Invalid legend position: {position}"
             )
         };
@@ -648,25 +648,25 @@ public abstract class ChartRenderer
     }
 
     /// <summary>Creates the title of the chart if any.</summary>
-    /// <param name="column">The column.</param>
+    /// <param name="block">The block.</param>
     /// <returns>
     /// The title element or null if the title is not enabled.
     /// </returns>
-    protected C.Title? CreateTitle(ImplicitSectionColumn column)
+    protected C.Title? CreateTitle(BlockContainer block)
     {
-        var text = column.ChartOptions?.Title;
+        var text = block.ChartOptions?.Title;
 
         if (text == null)
         {
             return null;
         }
 
-        var fontSize = column
+        var fontSize = block
             .ChartOptions
             ?.TitleFontSize
             ?? ILength.FromPoint(18);
         var color = ColorRenderer
-            .ParseColor(column.ChartOptions?.TitleColor);
+            .ParseColor(block.ChartOptions?.TitleColor);
 
         return new C.Title(
             new C.ChartText(
@@ -686,7 +686,7 @@ public abstract class ChartRenderer
 
     /// <summary>Creates the data labels of the chart if any.</summary>
     /// <param name="chartType">The type for the chart.</param>
-    /// <param name="column">The column.</param>
+    /// <param name="block">The block.</param>
     /// <param name="valueType">The type of the column values.</param>
     /// <returns>
     /// The data labels element or null if the data labels are not enabled.
@@ -696,12 +696,12 @@ public abstract class ChartRenderer
     /// </exception>
     protected C.DataLabels? CreateDataLabels(
         ChartType chartType,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         Type valueType
     )
     {
-        var position = column.ChartOptions?.DataLabelPosition;
-        var contents = column
+        var position = block.ChartOptions?.DataLabelPosition;
+        var contents = block
             .ChartOptions
             ?.DataLabelContents
             ?.Value
@@ -717,14 +717,14 @@ public abstract class ChartRenderer
             return null;
         }
 
-        var format = column.ChartOptions?.DataLabelFormat?.Value ?? "auto";
-        var labelRotate = column.ChartOptions?.DataLabelRotate?.Value ?? 0;
-        var fontSize = column
+        var format = block.ChartOptions?.DataLabelFormat?.Value ?? "auto";
+        var labelRotate = block.ChartOptions?.DataLabelRotate?.Value ?? 0;
+        var fontSize = block
             .ChartOptions
             ?.DataLabelFontSize
             ?? ILength.FromPoint(14);
         var color = ColorRenderer
-            .ParseColor(column.ChartOptions?.DataLabelColor);
+            .ParseColor(block.ChartOptions?.DataLabelColor);
 
         C.DataLabelPositionValues ThrowInvalidDataLabelPosition(
             bool forTheChartType
@@ -799,7 +799,7 @@ public abstract class ChartRenderer
             )
         };
 
-        var barDirection = column
+        var barDirection = block
             .ChartOptions
             ?.BarDirection
             ?.Value

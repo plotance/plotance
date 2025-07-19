@@ -21,7 +21,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// <summary>
     /// Creates a chart.
     /// </summary>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResult">The query result.</param>
     /// <param name="shouldUseAutoMinimum">
     /// Whether to use auto minimum or set minimum to 0.
@@ -34,7 +34,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// Thrown if the chart configuration is invalid.
     /// </exception>
     protected abstract C.Chart CreateChart(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         bool shouldUseAutoMinimum,
         bool shouldUseAutoMaximum
@@ -43,7 +43,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// <inheritdoc/>
     protected override void RenderChart(
         ChartPart chartPart,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         string relationShipId
     )
@@ -51,18 +51,18 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
         var shouldUseAutoMaximum = ShouldUseAutoMaximum(queryResult.Rows);
         var shouldUseAutoMinimum = ShouldUseAutoMinimum(queryResult.Rows);
         var chart = CreateChart(
-            column,
+            block,
             queryResult,
             shouldUseAutoMinimum,
             shouldUseAutoMaximum
         );
 
-        if (CreateTitle(column) is C.Title title)
+        if (CreateTitle(block) is C.Title title)
         {
             chart.AddChild(title);
         }
 
-        if (CreateLegend(column) is C.Legend legend)
+        if (CreateLegend(block) is C.Legend legend)
         {
             chart.AddChild(legend);
         }
@@ -77,20 +77,20 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// <summary>
     /// Creates the category axis.
     /// </summary>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResult">The query result.</param>
     /// <param name="position">The position of the axis.</param>
     /// <param name="crossingAxis">The ID of the crossing axis.</param>
     /// <returns>The category axis.</returns>
     protected OpenXmlCompositeElement CreateCategoryAxis(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         C.AxisPositionValues position,
         uint crossingAxis
     )
     {
         return CreateAxis(
-            column: column,
+            block: block,
             valueType: queryResult.Columns[0].Type,
             id: 1,
             minValue: null,
@@ -104,7 +104,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// <summary>
     /// Creates the value axis.
     /// </summary>
-    /// <param name="column">The column to render.</param>
+    /// <param name="block">The block to render.</param>
     /// <param name="queryResult">The query result.</param>
     /// <param name="shouldUseAutoMinimum">
     /// Whether to use auto minimum or set minimum to 0.
@@ -116,7 +116,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
     /// <param name="crossingAxis">The ID of the crossing axis.</param>
     /// <returns>The value axis.</returns>
     protected OpenXmlCompositeElement CreateValueAxis(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         bool shouldUseAutoMinimum,
         bool shouldUseAutoMaximum,
@@ -127,7 +127,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
         if (queryResult.Columns.Count > 1)
         {
             return CreateAxis(
-                column: column,
+                block: block,
                 valueType: queryResult.Columns[1].Type,
                 id: 2,
                 minValue: shouldUseAutoMinimum
@@ -143,7 +143,7 @@ public abstract class CategoryToAbsoluteValueChartRenderer : ChartRenderer
         else
         {
             return CreateAxis(
-                column: column,
+                block: block,
                 valueType: typeof(Double),
                 id: 2,
                 minValue: null,

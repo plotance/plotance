@@ -16,13 +16,13 @@ public class BubbleChartRenderer : ChartRenderer
     /// <inheritdoc/>
     protected override void RenderChart(
         ChartPart chartPart,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         string relationShipId
     )
     {
         var colors = ColorRenderer
-            .ParseColors(column.ChartOptions?.SeriesColors);
+            .ParseColors(block.ChartOptions?.SeriesColors);
 
         C.BubbleChartSeries CreateChartSeries(int columnIndex)
         {
@@ -43,14 +43,14 @@ public class BubbleChartRenderer : ChartRenderer
                     CreateFill(
                         colors,
                         index,
-                        column.ChartOptions?.MarkerFillOpacity
-                          ?? column.ChartOptions?.FillOpacity
+                        block.ChartOptions?.MarkerFillOpacity
+                          ?? block.ChartOptions?.FillOpacity
                     ),
                     CreateOutline(
                         colors,
                         index,
-                        column.ChartOptions?.MarkerLineWidth
-                          ?? column.ChartOptions?.LineWidth
+                        block.ChartOptions?.MarkerLineWidth
+                          ?? block.ChartOptions?.LineWidth
                     )
                 ),
                 new C.XValues(
@@ -88,7 +88,7 @@ public class BubbleChartRenderer : ChartRenderer
             new C.AxisId { Val = 1 },
             new C.AxisId { Val = 2 }
         ]);
-        var dataLabels = CreateDataLabels(ChartType.Bubble, column, valueType);
+        var dataLabels = CreateDataLabels(ChartType.Bubble, block, valueType);
 
         if (dataLabels != null)
         {
@@ -99,7 +99,7 @@ public class BubbleChartRenderer : ChartRenderer
             new C.PlotArea(
                 bubbleChart,
                 CreateAxis(
-                    column: column,
+                    block: block,
                     valueType: queryResult.Columns[0].Type,
                     id: 1,
                     minValue: null,
@@ -108,7 +108,7 @@ public class BubbleChartRenderer : ChartRenderer
                     crossingAxis: 2
                 ),
                 CreateAxis(
-                    column: column,
+                    block: block,
                     valueType: valueType,
                     id: 2,
                     minValue: null,
@@ -119,12 +119,12 @@ public class BubbleChartRenderer : ChartRenderer
             )
         );
 
-        if (CreateTitle(column) is C.Title title)
+        if (CreateTitle(block) is C.Title title)
         {
             chart.AddChild(title);
         }
 
-        if (CreateLegend(column) is C.Legend legend)
+        if (CreateLegend(block) is C.Legend legend)
         {
             chart.AddChild(legend);
         }

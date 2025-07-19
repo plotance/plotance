@@ -16,17 +16,17 @@ public class AreaChartRenderer : CategoryToAbsoluteValueChartRenderer
 {
     /// <inheritdoc/>
     protected override C.Chart CreateChart(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         bool shouldUseAutoMinimum,
         bool shouldUseAutoMaximum
     )
     {
         var colors = ColorRenderer
-            .ParseColors(column.ChartOptions?.SeriesColors);
-        var lineWidth = column.ChartOptions?.LineWidth ?? ILength.Zero;
+            .ParseColors(block.ChartOptions?.SeriesColors);
+        var lineWidth = block.ChartOptions?.LineWidth ?? ILength.Zero;
         var lineColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.LineColor);
+            .ParseColor(block.ChartOptions?.LineColor);
 
         C.AreaChartSeries CreateChartSeries(int columnIndex)
         {
@@ -50,7 +50,7 @@ public class AreaChartRenderer : CategoryToAbsoluteValueChartRenderer
                     CreateFill(
                         colors,
                         index,
-                        column.ChartOptions?.FillOpacity
+                        block.ChartOptions?.FillOpacity
                     ),
                     outline
                 ),
@@ -82,7 +82,7 @@ public class AreaChartRenderer : CategoryToAbsoluteValueChartRenderer
         var valueType = queryResult.Columns.Count > 1
             ? queryResult.Columns[1].Type
             : typeof(Double);
-        var dataLabels = CreateDataLabels(ChartType.Area, column, valueType);
+        var dataLabels = CreateDataLabels(ChartType.Area, block, valueType);
 
         if (dataLabels != null)
         {
@@ -93,13 +93,13 @@ public class AreaChartRenderer : CategoryToAbsoluteValueChartRenderer
             new C.PlotArea(
                 areaChart,
                 CreateCategoryAxis(
-                    column: column,
+                    block: block,
                     queryResult: queryResult,
                     position: C.AxisPositionValues.Bottom,
                     crossingAxis: 2
                 ),
                 CreateValueAxis(
-                    column: column,
+                    block: block,
                     queryResult: queryResult,
                     shouldUseAutoMinimum: shouldUseAutoMinimum,
                     shouldUseAutoMaximum: shouldUseAutoMaximum,

@@ -16,17 +16,17 @@ public class BarChartRenderer : CategoryToAbsoluteValueChartRenderer
 {
     /// <inheritdoc/>
     protected override C.Chart CreateChart(
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         bool shouldUseAutoMinimum,
         bool shouldUseAutoMaximum
     )
     {
         var colors = ColorRenderer
-            .ParseColors(column.ChartOptions?.SeriesColors);
-        var lineWidth = column.ChartOptions?.LineWidth ?? ILength.Zero;
+            .ParseColors(block.ChartOptions?.SeriesColors);
+        var lineWidth = block.ChartOptions?.LineWidth ?? ILength.Zero;
         var lineColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.LineColor);
+            .ParseColor(block.ChartOptions?.LineColor);
 
         C.BarChartSeries CreateChartSeries(int columnIndex)
         {
@@ -50,7 +50,7 @@ public class BarChartRenderer : CategoryToAbsoluteValueChartRenderer
                     CreateFill(
                         colors,
                         index,
-                        column.ChartOptions?.FillOpacity
+                        block.ChartOptions?.FillOpacity
                     ),
                     outline
                 ),
@@ -74,11 +74,11 @@ public class BarChartRenderer : CategoryToAbsoluteValueChartRenderer
             .Skip(1) // Skip the first column (category names)
             .Select((_, columnIndex) => CreateChartSeries(columnIndex + 1));
         var barDirection = ToBarDirectionValue(
-            column.ChartOptions?.BarDirection
+            block.ChartOptions?.BarDirection
         );
-        var barGrouping = ToBarGroupingValue(column.ChartOptions?.BarGrouping);
-        var barGap = column.ChartOptions?.BarGap?.Value ?? 20;
-        var barOverlap = column.ChartOptions?.BarOverlap?.Value ?? (
+        var barGrouping = ToBarGroupingValue(block.ChartOptions?.BarGrouping);
+        var barGap = block.ChartOptions?.BarGap?.Value ?? 20;
+        var barOverlap = block.ChartOptions?.BarOverlap?.Value ?? (
             barGrouping == C.BarGroupingValues.Clustered
                 ? 0
                 : 100
@@ -102,7 +102,7 @@ public class BarChartRenderer : CategoryToAbsoluteValueChartRenderer
         var valueType = queryResult.Columns.Count > 1
             ? queryResult.Columns[1].Type
             : typeof(Double);
-        var dataLabels = CreateDataLabels(ChartType.Bar, column, valueType);
+        var dataLabels = CreateDataLabels(ChartType.Bar, block, valueType);
 
         if (dataLabels != null)
         {
@@ -113,13 +113,13 @@ public class BarChartRenderer : CategoryToAbsoluteValueChartRenderer
             new C.PlotArea(
                 barChart,
                 CreateCategoryAxis(
-                    column: column,
+                    block: block,
                     queryResult: queryResult,
                     position: categoryAxisPosition,
                     crossingAxis: 2
                 ),
                 CreateValueAxis(
-                    column: column,
+                    block: block,
                     queryResult: queryResult,
                     shouldUseAutoMinimum: shouldUseAutoMinimum,
                     shouldUseAutoMaximum: shouldUseAutoMaximum,

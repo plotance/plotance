@@ -112,6 +112,11 @@ public class Configuration
     public ValueWithLocation<IReadOnlyList<ILengthWeight>>? Columns
         => GetWeights("columns");
 
+    /// <summary>The layout direction of blocks.</summary>
+    public ValueWithLocation<LayoutDirection>? LayoutDirection
+        => GetString("layout_direction")
+        ?.Parse("layout direction", Plotance.Models.LayoutDirection.Parse);
+
     /// <summary>The gap between slide rows.</summary>
     public ILength? RowGap => GetLength("row_gap");
 

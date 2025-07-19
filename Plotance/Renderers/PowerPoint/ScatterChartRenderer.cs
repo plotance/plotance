@@ -15,20 +15,20 @@ public class ScatterChartRenderer : ChartRenderer
     /// <inheritdoc/>
     protected override void RenderChart(
         ChartPart chartPart,
-        ImplicitSectionColumn column,
+        BlockContainer block,
         QueryResultSet queryResult,
         string relationShipId
     )
     {
         var colors = ColorRenderer
-            .ParseColors(column.ChartOptions?.SeriesColors);
-        var isLineChart = column.ChartOptions?.Format?.Value == "line";
+            .ParseColors(block.ChartOptions?.SeriesColors);
+        var isLineChart = block.ChartOptions?.Format?.Value == "line";
         var defaultLineWidth = isLineChart
             ? ILength.FromPoint(1)
             : ILength.Zero;
-        var lineWidth = column.ChartOptions?.LineWidth ?? defaultLineWidth;
+        var lineWidth = block.ChartOptions?.LineWidth ?? defaultLineWidth;
         var lineColor = ColorRenderer
-            .ParseColor(column.ChartOptions?.LineColor);
+            .ParseColor(block.ChartOptions?.LineColor);
 
         C.ScatterChartSeries CreateChartSeries(int columnIndex)
         {
@@ -53,7 +53,7 @@ public class ScatterChartRenderer : ChartRenderer
                     new C.Size()
                     {
                         Val = (byte)(
-                            column.ChartOptions?.MarkerSize?.ToPoint()
+                            block.ChartOptions?.MarkerSize?.ToPoint()
                             ?? 5
                         )
                     },
@@ -61,12 +61,12 @@ public class ScatterChartRenderer : ChartRenderer
                         CreateFill(
                             colors,
                             index,
-                            column.ChartOptions?.MarkerFillOpacity
+                            block.ChartOptions?.MarkerFillOpacity
                         ),
                         CreateOutline(
                             colors,
                             index,
-                            column.ChartOptions?.MarkerLineWidth
+                            block.ChartOptions?.MarkerLineWidth
                         )
                     )
                 ),
@@ -102,7 +102,7 @@ public class ScatterChartRenderer : ChartRenderer
             new C.AxisId { Val = 1 },
             new C.AxisId { Val = 2 }
         ]);
-        var dataLabels = CreateDataLabels(ChartType.Scatter, column, valueType);
+        var dataLabels = CreateDataLabels(ChartType.Scatter, block, valueType);
 
         if (dataLabels != null)
         {
@@ -117,7 +117,7 @@ public class ScatterChartRenderer : ChartRenderer
             new C.PlotArea(
                 scatterChart,
                 CreateAxis(
-                    column: column,
+                    block: block,
                     valueType: queryResult.Columns[0].Type,
                     id: 1,
                     minValue: minX,
@@ -126,7 +126,7 @@ public class ScatterChartRenderer : ChartRenderer
                     crossingAxis: 2
                 ),
                 CreateAxis(
-                    column: column,
+                    block: block,
                     valueType: valueType,
                     id: 2,
                     minValue: null,
@@ -137,12 +137,12 @@ public class ScatterChartRenderer : ChartRenderer
             )
         );
 
-        if (CreateTitle(column) is C.Title title)
+        if (CreateTitle(block) is C.Title title)
         {
             chart.AddChild(title);
         }
 
-        if (CreateLegend(column) is C.Legend legend)
+        if (CreateLegend(block) is C.Legend legend)
         {
             chart.AddChild(legend);
         }

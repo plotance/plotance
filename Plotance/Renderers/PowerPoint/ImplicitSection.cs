@@ -15,31 +15,42 @@ namespace Plotance.Renderers.PowerPoint;
 /// <param name="HeadingBlock">
 /// The heading block that defines the section, if any.
 /// </param>
-/// <param name="Rows">The rows of content in the section.</param>
+/// <param name="BlockGroups">
+/// The rows (if LayoutDirection is "row") or columns (if LayoutDirection is
+/// "column") of content in the section.
+/// </param>
 /// <param name="Variables">
 /// Dictionary of variables to expand in the section content.
 /// </param>
 /// <param name="TitleFontScale">
 /// The scale factor for the font size of the title, if any.
 /// </param>
-/// <param name="Language">The language for the section content, if any.</param>
+/// <param name="Language">
+/// The language for the section content, if any.
+/// </param>
 /// <param name="SlideLevel">
 /// The maximum heading level that starts a new slide, if any.
 /// </param>
+/// <param name="LayoutDirection">
+/// The layout direction of the section, if any.
+/// </param>
 public record ImplicitSection(
     HeadingBlock? HeadingBlock,
-    IReadOnlyList<ImplicitSectionRow> Rows,
+    IReadOnlyList<BlockGroup> BlockGroups,
     IReadOnlyDictionary<string, string> Variables,
     ValueWithLocation<decimal>? TitleFontScale = null,
     ValueWithLocation<string>? Language = null,
-    ValueWithLocation<int>? SlideLevel = null
+    ValueWithLocation<int>? SlideLevel = null,
+    ValueWithLocation<LayoutDirection>? LayoutDirection = null
 )
 {
     /// <summary>The path to the file containing the section.</summary>
-    public string? Path => Rows.FirstOrDefault(row => row.Path != null)?.Path;
+    public string? Path => BlockGroups
+        .FirstOrDefault(group => group.Path != null)?.Path;
 
     /// <summary>The line number in the file containing the section.</summary>
-    public long Line => Rows.FirstOrDefault(row => row.Path != null)?.Line ?? 0;
+    public long Line => BlockGroups
+        .FirstOrDefault(group => group.Path != null)?.Line ?? 0;
 
     /// <summary>
     /// Creates a list of implicit sections from a list of Markdown blocks.
@@ -105,7 +116,7 @@ public record ImplicitSection(
 
         AddSection();
 
-        if (!sections[0].Rows.Any())
+        if (!sections[0].BlockGroups.Any())
         {
             sections.RemoveAt(0);
         }
@@ -115,7 +126,8 @@ public record ImplicitSection(
 
     /// <summary>
     /// Creates an implicit section from a heading block and a collection of
-    /// blocks. Blocks are grouped into rows.
+    /// blocks. Blocks are grouped into rows (if LayoutDirection is "row") or
+    /// columns (if LayoutDirection is "column").
     /// </summary>
     /// <param name="headingBlock">
     /// The heading block that defines the section, if any.
@@ -142,36 +154,38 @@ public record ImplicitSection(
         var titleFontScale = accumulatedConfig.TitleFontScale;
         var titleLanguage = accumulatedConfig.Language;
         var slideLevel = accumulatedConfig.SlideLevel;
-        List<ILengthWeight> rowWeights = [];
-        int rowIndex = 0;
-        var rows = new List<ImplicitSectionRow>();
-        ILength? rowGap = null;
-        var currentRowColumns = new List<ImplicitSectionColumn>();
-        List<ILengthWeight> columnWeights = [
-            new RelativeLengthWeight(null, 0, 1)
-        ];
-        int columnIndex = 0;
+        List<IEnumerable<ILengthWeight>> rowWeightsRaw = [];
+        List<IEnumerable<ILengthWeight>> columnWeightsRaw = [];
+        List<ILengthWeight> blockGroupWeights = [];
+        int blockGroupIndex = 0;
+        var blockGroups = new List<BlockGroup>();
+        ILength? blockGroupGap = null;
+        var currentBlockGroupContents = new List<BlockContainer>();
+        List<ILengthWeight> blockWeights = [];
+        int blockIndex = 0;
+        ValueWithLocation<LayoutDirection>? layoutDirectionRaw = null;
+        LayoutDirection? layoutDirection = null;
 
         accumulatedConfig.ResetFontScales();
 
-        void AddRow()
+        void AddBlockGroup()
         {
-            while (rowWeights.Count <= rowIndex)
+            while (blockGroupWeights.Count <= blockGroupIndex)
             {
-                rowWeights.Add(new RelativeLengthWeight(null, 0, 1));
+                blockGroupWeights.Add(new RelativeLengthWeight(null, 0, 1));
             }
 
-            rows.Add(
-                new ImplicitSectionRow(
-                    rowWeights[rowIndex],
-                    currentRowColumns,
-                    rowGap
+            blockGroups.Add(
+                new BlockGroup(
+                    blockGroupWeights[blockGroupIndex],
+                    currentBlockGroupContents,
+                    blockGroupGap
                 )
             );
-            rowGap = null;
-            currentRowColumns = new List<ImplicitSectionColumn>();
-            columnIndex = 0;
-            rowIndex++;
+            blockGroupGap = null;
+            currentBlockGroupContents = new List<BlockContainer>();
+            blockIndex = 0;
+            blockGroupIndex++;
         }
 
         bool IsInvisibleBlock(Block block)
@@ -289,12 +303,23 @@ public record ImplicitSection(
 
                 mergedConfig = AccumulateConfig(flattenConfig);
 
+
                 if (
                     config.Rows?.Value
-                        is IEnumerable<ILengthWeight> newRowWeights
+                            is IEnumerable<ILengthWeight> newRowWeights
                 )
                 {
-                    rowWeights.AddRange(newRowWeights);
+                    if (layoutDirection == null)
+                    {
+                        rowWeightsRaw.Add(newRowWeights);
+                    }
+                    else
+                    {
+                        layoutDirection.Switch(
+                            () => blockGroupWeights.AddRange(newRowWeights),
+                            () => blockWeights = newRowWeights.ToList()
+                        );
+                    }
                 }
 
                 if (
@@ -302,7 +327,17 @@ public record ImplicitSection(
                         is IEnumerable<ILengthWeight> newColumnWeights
                 )
                 {
-                    columnWeights = newColumnWeights.ToList();
+                    if (layoutDirection == null)
+                    {
+                        columnWeightsRaw.Add(newColumnWeights);
+                    }
+                    else
+                    {
+                        layoutDirection.Switch(
+                            () => blockWeights = newColumnWeights.ToList(),
+                            () => blockGroupWeights.AddRange(newColumnWeights)
+                        );
+                    }
                 }
             }
             else
@@ -312,19 +347,52 @@ public record ImplicitSection(
 
             if (!IsInvisibleBlock(block))
             {
-                if (columnIndex == 0)
+                if (blockGroupIndex == 0 && blockIndex == 0)
                 {
-                    rowGap = mergedConfig.RowGap;
+                    layoutDirectionRaw = mergedConfig.LayoutDirection;
+                    layoutDirection = layoutDirectionRaw?.Value
+                        ?? Plotance.Models.LayoutDirection.Row;
+
+                    List<IEnumerable<ILengthWeight>> blockGroupWeightsRaw
+                        = layoutDirection.Choose(
+                            row: rowWeightsRaw,
+                            column: columnWeightsRaw
+                        );
+                    List<IEnumerable<ILengthWeight>> blockWeightsRaw
+                        = layoutDirection.Choose(
+                            row: columnWeightsRaw,
+                            column: rowWeightsRaw
+                        );
+
+                    blockGroupWeights = blockGroupWeightsRaw
+                        .SelectMany(l => l).ToList();
+                    blockWeights = blockWeightsRaw.Any()
+                        ? blockWeightsRaw[^1].ToList()
+                        : [
+                            new RelativeLengthWeight(null, 0, 1)
+                        ];
                 }
 
-                var weight = columnIndex < columnWeights.Count
-                    ? columnWeights[columnIndex]
+                if (blockIndex == 0)
+                {
+                    blockGroupGap = layoutDirection!.Choose(
+                        row: mergedConfig.RowGap,
+                        column: mergedConfig.ColumnGap
+                    );
+                }
+
+                var blockGap = layoutDirection!.Choose(
+                    row: mergedConfig.ColumnGap,
+                    column: mergedConfig.RowGap
+                );
+                var weight = blockIndex < blockWeights.Count
+                    ? blockWeights[blockIndex]
                     : new RelativeLengthWeight(null, 0, 1);
-                var column = new ImplicitSectionColumn(
+                var column = new BlockContainer(
                     weight,
                     block,
                     new Dictionary<string, string>(accumulatedVariables),
-                    mergedConfig.ColumnGap,
+                    blockGap,
                     mergedConfig.BodyFontScale,
                     mergedConfig.Language,
                     mergedConfig.BodyHorizontalAlign,
@@ -332,65 +400,70 @@ public record ImplicitSection(
                     mergedConfig.Clone().ChartOptions
                 );
 
-                currentRowColumns.Add(column);
-                columnIndex++;
-            }
+                currentBlockGroupContents.Add(column);
+                blockIndex++;
 
-            if (columnWeights.Count <= columnIndex)
-            {
-                AddRow();
+                if (blockWeights.Count <= blockIndex)
+                {
+                    AddBlockGroup();
+                }
             }
         }
 
-        if (currentRowColumns.Any())
+        if (currentBlockGroupContents.Any())
         {
-            AddRow();
+            AddBlockGroup();
         }
 
         return new ImplicitSection(
             headingBlock,
-            rows,
+            blockGroups,
             new Dictionary<string, string>(accumulatedVariables),
             titleFontScale,
             titleLanguage,
-            slideLevel
+            slideLevel,
+            layoutDirectionRaw
         );
     }
 }
 
 /// <summary>
-/// Represents a row in an implicit section, containing columns of content.
+/// Represents a row (if LayoutDirection is "row") or column (if LayoutDirection
+/// is "column") in an implicit section, containing blocks.
 /// </summary>
-/// <param name="Weight">The relative height of this row.</param>
-/// <param name="Columns">The columns of content in this row.</param>
-public record ImplicitSectionRow(
+/// <param name="Weight">The relative height of this block group.</param>
+/// <param name="Blocks">The blocks in this block group.</param>
+/// <param name="GapBefore">The gap before this block group.</param>
+public record BlockGroup(
     ILengthWeight Weight,
-    IReadOnlyList<ImplicitSectionColumn> Columns,
+    IReadOnlyList<BlockContainer> Blocks,
     ILength? GapBefore = null
 )
 {
-    /// <summary>The path to the file containing the row.</summary>
+    /// <summary>The path to the file containing the block group.</summary>
     public string? Path
-        => Columns.FirstOrDefault(column => column.Path != null)?.Path;
+        => Blocks.FirstOrDefault(block => block.Path != null)?.Path;
 
-    /// <summary>The line number in the file containing the row.</summary>
+    /// <summary>
+    /// The line number in the file containing the block group.
+    /// </summary>
     public long Line
-        => Columns.FirstOrDefault(column => column.Path != null)?.Line ?? 0;
+        => Blocks.FirstOrDefault(block => block.Path != null)?.Line ?? 0;
 }
 
 /// <summary>
-/// Represents a column in an implicit section row, containing a Markdown block
-/// with associated formatting options.
+/// Represents a block container in an implicit section block group, containing
+/// a Markdown block with associated formatting options.
 /// </summary>
-/// <param name="Weight">The relative width of this column.</param>
-/// <param name="Block">The Markdown block in this column.</param>
+/// <param name="Weight">The relative width of this block.</param>
+/// <param name="Block">The Markdown block in this block.</param>
 /// <param name="Variables">
-/// Dictionary of variables to expand in the column content.
+/// Dictionary of variables to expand in the content.
 /// </param>
 /// <param name="BodyFontScale">
 /// The scale factor for the font size of the body text, if any.
 /// </param>
-/// <param name="Language">The language for the column content, if any.</param>
+/// <param name="Language">The language for the content, if any.</param>
 /// <param name="BodyHorizontalAlign">
 /// The horizontal alignment of the body text, if any.
 /// </param>
@@ -398,9 +471,9 @@ public record ImplicitSectionRow(
 /// The vertical alignment of the body text, if any.
 /// </param>
 /// <param name="ChartOptions">
-/// The chart options when rendering this column as a chart, if any.
+/// The chart options when rendering this block as a chart, if any.
 /// </param>
-public record ImplicitSectionColumn(
+public record BlockContainer(
     ILengthWeight Weight,
     Block Block,
     IReadOnlyDictionary<string, string> Variables,
@@ -412,9 +485,9 @@ public record ImplicitSectionColumn(
     ChartOptions? ChartOptions = null
 )
 {
-    /// <summary>The path to the file containing the column.</summary>
+    /// <summary>The path to the file containing the block.</summary>
     public string? Path => Block.GetData("path") as string;
 
-    /// <summary>The line number in the file containing the column.</summary>
+    /// <summary>The line number in the file containing the block.</summary>
     public long Line => Block.Line;
 }
