@@ -209,7 +209,7 @@ public static class PowerPointRenderer
         var headingLevel = section.HeadingBlock?.Level;
         var slideLevel = section.SlideLevel?.Value ?? 2;
 
-        if (slideLevel <= headingLevel)
+        if (headingLevel == null || slideLevel <= headingLevel)
         {
             return defaultSlideLayoutType;
         }
