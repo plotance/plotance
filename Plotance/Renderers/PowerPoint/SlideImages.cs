@@ -262,6 +262,18 @@ public static class SlideImages
                 var path = uri.IsAbsoluteUri
                     ? uri.LocalPath
                     : Uri.UnescapeDataString(imageUrl);
+
+                if (
+                    !uri.IsAbsoluteUri
+                        && imageLink.Path is string documentPath
+                )
+                {
+                    path = Path.Combine(
+                        Path.GetDirectoryName(documentPath)!,
+                        path
+                    );
+                }
+
                 var imagePartType = DetermineImagePartTypeFromExtension(path);
                 var imagePart = slidePart.AddImagePart(imagePartType);
                 using var stream = File.OpenRead(path);
@@ -489,7 +501,8 @@ public static class SlideImages
 
 /// <summary>Represents an image link in a Markdown.</summary>
 /// <param name="Path">
-/// The path to the file containing the value, for error reporting.
+/// The path to the file containing the value, for error reporting and
+/// resolving relative paths.
 /// </param>
 /// <param name="Line">The line number in the file, for error reporting.</param>
 /// <param name="ImageUrl">The URL of the image.</param>
