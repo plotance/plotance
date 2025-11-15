@@ -393,7 +393,7 @@ public record MappingConfigNode(
     /// </summary>
     /// <param name="keys">The keys to remove from the mapping.</param>
     /// <returns>A new mapping node without the specified keys.</returns>
-    public MappingConfigNode WithoutKeys(params string[] keys)
+    public MappingConfigNode WithoutKeys(params IEnumerable<string> keys)
     {
         var newKeyValues = new Dictionary<string, ConfigNode>(KeyValues);
         var newKeyLocations = new Dictionary<string, (string?, long)>(

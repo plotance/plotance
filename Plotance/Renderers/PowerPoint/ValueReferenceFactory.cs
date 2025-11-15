@@ -145,7 +145,7 @@ public abstract class ValueReferenceFactory
     /// reference, (i.e. StringReference or NumberReference).
     /// </returns>
     protected abstract OpenXmlCompositeElement CreateReference(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     );
 
     /// <summary>
@@ -159,7 +159,7 @@ public abstract class ValueReferenceFactory
     /// (i.e. StringCache or NumberingCache).
     /// </returns>
     protected abstract OpenXmlCompositeElement CreateCache(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     );
 
     /// <summary>
@@ -188,7 +188,7 @@ public class StringReferenceFactory : ValueReferenceFactory
     /// </param>
     /// <returns>A StringReference element.</returns>
     protected override OpenXmlCompositeElement CreateReference(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     ) => new C.StringReference(children);
 
     /// <summary>
@@ -199,7 +199,7 @@ public class StringReferenceFactory : ValueReferenceFactory
     /// </param>
     /// <returns>A StringCache element.</returns>
     protected override OpenXmlCompositeElement CreateCache(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     ) => new C.StringCache(children);
 
     /// <summary>
@@ -225,7 +225,7 @@ public class NumericReferenceFactory : ValueReferenceFactory
     /// </param>
     /// <returns>A NumberReference element.</returns>
     protected override OpenXmlCompositeElement CreateReference(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     ) => new C.NumberReference(children);
 
     /// <summary>
@@ -236,7 +236,7 @@ public class NumericReferenceFactory : ValueReferenceFactory
     /// </param>
     /// <returns>A NumberingCache element.</returns>
     protected override OpenXmlCompositeElement CreateCache(
-        params OpenXmlElement[] children
+        params IEnumerable<OpenXmlElement> children
     ) => new C.NumberingCache(children);
 
     /// <summary>
